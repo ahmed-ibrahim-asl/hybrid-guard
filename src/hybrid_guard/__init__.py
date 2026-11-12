@@ -9,8 +9,10 @@ Before acceptance: the coverage-matched acceptance test (CMAT) asks whether a hy
 from hybrid_guard.capacity import capacity_curve, capacity_diagnostics, irreducible_error, smallest_sufficient_delta
 from hybrid_guard.cmat import ABSTAIN, ACCEPT, REJECT, CMATResult, block_sums, cmat, random_matched
 from hybrid_guard.dilution import admissible_mean_excess, coverage_dilution, random_router_passes
+from hybrid_guard.report import html_report, save_report
+from hybrid_guard.thresholds import choose_threshold, coverage_harm_curve
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __all__ = ["ABSTAIN", "ACCEPT", "REJECT", "CMATResult", "admissible_mean_excess", "block_sums", "capacity_curve",
-           "capacity_diagnostics", "cmat", "coverage_dilution", "irreducible_error", "random_matched",
-           "random_router_passes", "smallest_sufficient_delta"]
+           "capacity_diagnostics", "choose_threshold", "cmat", "coverage_dilution", "coverage_harm_curve", "html_report",
+           "irreducible_error", "random_matched", "random_router_passes", "save_report", "smallest_sufficient_delta"]

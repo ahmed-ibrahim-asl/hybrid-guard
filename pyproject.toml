@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hybrid-guard"
-version = "0.1.0"
+version = "0.2.0"
 description = "Check physics-ML hybrid models before training (correction capacity) and before acceptance (coverage-matched acceptance test)."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -22,6 +22,11 @@ dependencies = ["numpy>=1.23", "pandas>=1.5"]
 
 [project.optional-dependencies]
 test = ["pytest>=7"]
+plot = ["matplotlib>=3.6"]
+parquet = ["pyarrow>=12"]
+
+[project.scripts]
+hybrid-guard = "hybrid_guard.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
