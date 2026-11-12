@@ -44,7 +44,7 @@ def test_html_report_contains_every_candidate_and_both_themes(tmp_path):
     page = html_report(results, title="Test report")
     for name in results:
         assert name in page
-    assert "prefers-color-scheme: dark" in page and '[data-theme="dark"]' in page and "<svg" in page
+    assert "prefers-color-scheme: light" in page and '[data-theme="light"]' in page and "<svg" in page
     assert html_report(results, standalone=False).startswith("<title>")
 
 

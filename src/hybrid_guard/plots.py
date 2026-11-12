@@ -8,7 +8,7 @@ import numpy as np
 
 from hybrid_guard.cmat import CMATResult
 
-VERDICT_COLORS = {"ACCEPT": "#1f8a5b", "REJECT": "#c8453b", "ABSTAIN": "#b7832f"}
+VERDICT_COLORS = {"ACCEPT": "#326E4E", "REJECT": "#A8402B", "ABSTAIN": "#727B89"}  # eng-asl.com status colours (paper)
 
 
 def _plt():
