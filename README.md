@@ -45,6 +45,33 @@ result.reasons           # which conditions passed or failed, in plain words
 
 CMAT counts only material changes (by default more than 0.01 in the target's units, for example one percent of rated power) and accepts only when all of the following hold: the aggregate margin, at least 30 changed rows, more material benefits than harms, an upper confidence bound on material harm of at most 0.10, and, for selective policies, harm below that of random selection at the same coverage. Bounds come from a bootstrap over whole blocks of rows (whole days for time series). Every threshold is an argument.
 
+## Charts
+
+Every chart is a function in `hybrid_guard.charts` that returns a `Chart`. Put it in a report, save it as an SVG for a paper (`chart.save("fig.svg", theme="light")`) or as a small HTML page (`chart.save("fig.html")`). In Jupyter it displays inline. The table behind each chart comes from `hybrid_guard.analysis`, so you can also plot the numbers yourself.
+
+| Chart | Function | Input | Table behind it |
+|---|---|---|---|
+| Accuracy against safety | `charts.accuracy_safety(results)` | dict of `cmat` results | `leaderboard(results)` |
+| Condition matrix | `charts.conditions(results)` | dict of `cmat` results | `condition_table(results)` |
+| What happened to changed rows | `charts.changes(results)` | dict of `cmat` results | `change_breakdown(results)` |
+| Leaderboard | `charts.leaderboard_table(results)` | dict of `cmat` results | `leaderboard(results)` |
+| Coverage against harm | `charts.coverage_harm(curves, chosen=...)` | dict of `coverage_harm_curve(...)` | `coverage_harm_curve(...)` |
+| Where it fails | `charts.harm_map(table)` | `harm_by_condition(..., rows=, columns=)` | same |
+| Period by period | `charts.monitor_chart(series)` | dict of `monitor(..., timestamps=)` | `monitor(...)` |
+| Capacity curves (before training) | `charts.capacity(curve)` | `capacity_curve(y, prior)` | same |
+| How far the physics is off (before training) | `charts.gap(distribution)` | `gap_distribution(y, prior)` | same |
+
+Choose what goes into a report:
+
+```python
+from hybrid_guard import html_report, charts, monitor
+
+page = html_report(results,
+                   charts=["accuracy_safety", "conditions", "changes", "leaderboard"],
+                   extra=[charts.monitor_chart({"router": monitor(y, base, physics, mask, timestamps=t)})],
+                   layout="certificate")   # or "leaderboard" to put the ranked table first
+```
+
 ## How to cite
 
 If you use the capacity diagnostics, cite:
