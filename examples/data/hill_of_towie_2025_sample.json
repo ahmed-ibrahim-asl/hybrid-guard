@@ -1,0 +1,11 @@
+{
+  "rows": 107390,
+  "turbines": [
+    "T05",
+    "T10",
+    "T15"
+  ],
+  "harm_threshold": 0.13163321193733218,
+  "source": "Hill of Towie open dataset v2, RES on behalf of TRIG, CC BY 4.0, doi:10.5281/zenodo.22662930",
+  "notes": "power and predictions are per unit of 2300 kW rated power; rows follow the paper's deployable and curtailment masks"
+}

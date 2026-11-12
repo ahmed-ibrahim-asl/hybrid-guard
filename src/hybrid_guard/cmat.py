@@ -10,9 +10,12 @@ in the reverse case. CMAT accepts only if every condition holds:
 2. support     at least ``min_rows`` materially changed rows (otherwise ABSTAIN);
 3. net benefit lower bound of (benefit share - harm share) on S above zero;
 4. safety      upper bound of the harm share on S at most ``harm_bound``;
-5. skill       for selective policies, lower bound of (harm base rate of the candidate over
-               all rows - harm share on S) above zero, i.e. better than random selection at
-               the same coverage.
+5. skill       for selective policies, lower bound of (harm base rate - harm share on S) above
+               zero, i.e. better than random selection at the same coverage. The base rate is
+               the candidate's harm share among the rows it would change if applied everywhere
+               (``base_definition="changed"``), the expected harm share of random selection.
+               ``base_definition="rows"`` divides by all rows instead, as in the original paper;
+               that comparison is stricter (conservative).
 
 Bounds come from a paired bootstrap over whole blocks of rows (for time series, whole days
 by default), recomputing every ratio in each replicate. Because acceptance needs every
@@ -60,7 +63,7 @@ class CMATResult:
     def summary(self) -> str:
         lines = [f"CMAT decision: {self.decision}",
                  f"  rows {self.rows:,}, selected {self.selected_rows:,} (coverage {self.coverage:.3f}), materially changed {self.changed_rows:,}",
-                 f"  NRMSE {self.nrmse_incumbent:.4f} -> {self.nrmse_candidate:.4f}, difference {self.nrmse_difference:+.4f} "
+                 f"  {self.settings.get('metric', 'NRMSE')} {self.nrmse_incumbent:.4f} -> {self.nrmse_candidate:.4f}, difference {self.nrmse_difference:+.4f} "
                  f"[{self.nrmse_lower:+.4f}, {self.nrmse_upper:+.4f}]"]
         if self.harm is not None:
             lines.append(f"  material harm {self.harm:.3f} (upper {self.harm_upper if self.harm_upper is None else round(self.harm_upper, 3)}), "
@@ -99,21 +102,26 @@ def block_sums(y, incumbent, candidate, selected=None, *, candidate_all=None, ma
     benefit = changed & (gain > materiality)
     base = (np.abs(h_all - f) > materiality) & ((np.abs(h_all - y) - np.abs(f - y)) > materiality)
     labels = _labels(len(y), timestamps, groups, block)
-    columns = [np.ones(len(y)), (routed - y) ** 2, (f - y) ** 2, changed, harm, benefit, base, sel]
+    base_changed = np.abs(h_all - f) > materiality
+    columns = [np.ones(len(y)), (routed - y) ** 2, (f - y) ** 2, changed, harm, benefit, base, sel, base_changed]
     return np.column_stack([np.bincount(labels, weights=np.asarray(c, float), minlength=labels.max() + 1) for c in columns])
 
 
-def _stats(t: np.ndarray):
+def _stats(t: np.ndarray, base_definition: str = "changed"):
     n, routed, base_sq, changed, harm, benefit, base = (t[..., i] for i in range(7))
     nrmse = np.sqrt(routed / n) - np.sqrt(base_sq / n)
     with np.errstate(invalid="ignore", divide="ignore"):
         h = np.where(changed > 0, harm / changed, np.nan)
         g = np.where(changed > 0, benefit / changed, np.nan)
+    if base_definition == "changed":
+        with np.errstate(invalid="ignore", divide="ignore"):
+            return nrmse, h, g, np.where(t[..., 8] > 0, base / t[..., 8], np.nan)
     return nrmse, h, g, base / n
 
 
 def cmat(y, incumbent, candidate, selected=None, *, timestamps=None, groups=None, block: str | None = "24h",
          candidate_all=None, selective: bool | None = None, materiality: float = 0.01, min_rows: int = 30,
+         base_definition: str = "changed",
          margin: float = 0.002, harm_bound: float = 0.10, alpha: float = 0.05, replicates: int = 10_000,
          seed: int = 42, chunk: int = 500) -> CMATResult:
     """Run CMAT. ``selected`` defaults to all rows (a full hybrid).
@@ -127,14 +135,16 @@ def cmat(y, incumbent, candidate, selected=None, *, timestamps=None, groups=None
     sums = block_sums(y, incumbent, candidate, sel, candidate_all=candidate_all, materiality=materiality,
                       timestamps=timestamps, groups=groups, block=block)
     total = sums.sum(axis=0)
-    nrmse, harm, benefit, base = (float(v) for v in _stats(total[:7]))
+    if base_definition not in ("changed", "rows"):
+        raise ValueError('base_definition must be "changed" or "rows"')
+    nrmse, harm, benefit, base = (float(v) for v in _stats(total, base_definition))
     rng = np.random.default_rng(seed)
     count = len(sums)
     b_n, b_h, b_net, b_gap = [], [], [], []
     for start in range(0, replicates, chunk):
         size = min(chunk, replicates - start)
-        draws = sums[rng.integers(0, count, size=(size, count))].sum(axis=1)[..., :7]
-        d_n, d_h, d_g, d_b = _stats(draws)
+        draws = sums[rng.integers(0, count, size=(size, count))].sum(axis=1)
+        d_n, d_h, d_g, d_b = _stats(draws, base_definition)
         b_n.append(d_n)
         b_h.append(d_h)
         b_net.append(d_g - d_h)
@@ -143,7 +153,7 @@ def cmat(y, incumbent, candidate, selected=None, *, timestamps=None, groups=None
     lo_q, hi_q = alpha / 2.0, 1.0 - alpha / 2.0
     nrmse_lower, nrmse_upper = (float(v) for v in np.quantile(b_n, [lo_q, hi_q]))
     changed_rows = int(total[3])
-    settings = {"materiality": materiality, "min_rows": min_rows, "margin": margin, "harm_bound": harm_bound,
+    settings = {"metric": "NRMSE", "base_definition": base_definition, "materiality": materiality, "min_rows": min_rows, "margin": margin, "harm_bound": harm_bound,
                 "alpha": alpha, "replicates": replicates, "seed": seed, "blocks": int(count)}
     common = dict(rows=int(total[0]), selected_rows=int(total[7]), changed_rows=changed_rows,
                   coverage=float(total[7] / total[0]), change_coverage=float(total[3] / total[0]), nrmse_incumbent=float(np.sqrt(total[2] / total[0])),

@@ -169,7 +169,7 @@ class Chart:
 
 def _cand_tip(name: str, r: CMATResult) -> str:
     harm = f"; harm {_fmt(r.harm)}" + (f" (upper {_fmt(r.harm_upper)})" if r.harm_upper is not None else "")
-    return (f"{name}: {r.decision}. NRMSE change {_signed(r.nrmse_difference)} [{_signed(r.nrmse_lower)}, "
+    return (f"{name}: {r.decision}. {r.settings.get('metric', 'NRMSE')} change {_signed(r.nrmse_difference)} [{_signed(r.nrmse_lower)}, "
             f"{_signed(r.nrmse_upper)}]{harm if r.harm is not None else ''}; coverage {r.coverage:.3f}")
 
 
@@ -178,7 +178,7 @@ def accuracy_safety(results: Mapping[str, CMATResult], *, title: str = "Accuracy
     plotted = {k: r for k, r in results.items() if r.harm is not None}
     first = next(iter(results.values())).settings
     margin, bound = first["margin"], first["harm_bound"]
-    caption = "Horizontal whiskers: 95% interval of the NRMSE change. Vertical whiskers: upper bound of material harm."
+    caption = f"Horizontal whiskers: 95% interval of the {first.get('metric', 'NRMSE')} change. Vertical whiskers: upper bound of material harm."
     if not plotted:
         return Chart("accuracy_safety", title, caption, '<text class="hg-axis" x="20" y="40">No candidate changed enough rows.</text>', 600, 80)
     xs = [v for r in plotted.values() for v in (r.nrmse_lower, r.nrmse_upper)] + [0.0, margin]
@@ -195,7 +195,7 @@ def accuracy_safety(results: Mapping[str, CMATResult], *, title: str = "Accuracy
           _text(sx(margin) + 4, box[1] + 12, f"margin +{margin:g}")]
     p += _bound_line(box, sy, bound)
     p += [_text(box[0] + 6, sy(bound) + 16, "accept region", style="fill:var(--ok)"),
-          _text((box[0] + box[2]) / 2, H - 8, "NRMSE change against the incumbent (left of 0 is more accurate)", "hg-axis", "middle"),
+          _text((box[0] + box[2]) / 2, H - 8, f"{first.get('metric', 'NRMSE')} change against the incumbent (left of 0 is more accurate)", "hg-axis", "middle"),
           f'<text class="hg-axis" transform="translate(16 {(box[1] + box[3]) / 2:.1f}) rotate(-90)" text-anchor="middle">material harm on changed rows</text>']
     points = [(sx(r.nrmse_difference), sy(r.harm)) for r in plotted.values()]
     placed: list[tuple[float, float, float]] = []
@@ -367,7 +367,7 @@ def monitor_chart(series: Mapping[str, pd.DataFrame], *, harm_bound: float = 0.1
     sy = _lin(0, y_hi, box[3], box[1])
     p = _axes(sx, sy, list(range(len(periods))), _ticks(0, y_hi, 4), box, lambda v: str(periods[int(v)]))
     p += [_line(box[0], sy(harm_bound), box[2], sy(harm_bound), "stroke:var(--alert);stroke-dasharray:6 4"),
-          _text(box[2], sy(harm_bound) - 6, f"harm bound {harm_bound:g}", anchor="end", style="fill:var(--alert)")]
+          _text(box[0] + 4, sy(harm_bound) - 6, f"harm bound {harm_bound:g}", style="fill:var(--alert)")]
     ends = []
     for i, (name, s) in enumerate(series.items()):
         col = SERIES[i % len(SERIES)]
@@ -409,7 +409,8 @@ def leaderboard_table(results: Mapping[str, CMATResult], *, title: str = "Leader
                     f'<span style="left:50%;width:1px;background:var(--muted)"></span></div></td>'
                     f'<td class="num">{harm}</td><td><div class="bar"><span style="left:0;width:{hw:.1f}%;background:{VERDICT[r.decision]}"></span>'
                     f'<i class="bound" style="left:{bound * 100:.1f}%"></i></div></td><td class="num">{r.coverage:.3f}</td></tr>')
-    body = ('<div class="hg-table"><table><thead><tr><th>#</th><th>Candidate</th><th>Verdict</th><th>NRMSE change</th><th></th>'
+    metric = next(iter(results.values())).settings.get('metric', 'NRMSE')
+    body = ('<div class="hg-table"><table><thead><tr><th>#</th><th>Candidate</th><th>Verdict</th>' + f'<th>{_e(metric)} change</th><th></th>'
             '<th>Harm</th><th></th><th>Coverage</th></tr></thead><tbody>' + "".join(rows) + "</tbody></table></div>")
     return Chart("leaderboard", title, "Accepted first, then by material harm. Red tick: the harm bound.", body, kind="html")
 

@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite the papers listed under references."
 title: "hybrid-guard: checks for physics-ML hybrid models before training and before acceptance"
-version: 0.3.0
+version: 0.4.0
 license: MIT
 authors:
   - family-names: Asl

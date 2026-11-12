@@ -155,9 +155,9 @@ def _signed(value: float, digits: int = 4) -> str:
 def _conditions(r: CMATResult) -> list[tuple[str, str, str, str]]:
     s = r.settings
     out = [("Aggregate", "pass" if r.nrmse_upper < s["margin"] else "fail", _signed(r.nrmse_upper),
-            f"NRMSE change upper bound, must be below {s['margin']}")]
+            f"{s.get('metric', 'NRMSE')} change upper bound, must be below {s['margin']}")]
     support = r.changed_rows >= s["min_rows"]
-    out.append(("Support", "pass" if support else "fail", f"{r.changed_rows:,} rows", f"changed by more than {s['materiality']}, need {s['min_rows']}"))
+    out.append(("Support", "pass" if support else "fail", f"{r.changed_rows:,} rows", (f"changed by more than {s['materiality']}" if not isinstance(s['materiality'], str) else "changed label") + f", need {s['min_rows']}"))
     if not support:
         out += [(name, "na", "not tested", "too few changed rows") for name in ("Net benefit", "Safety")]
         out.append(("Skill", "na", "not tested", "too few changed rows" if r.selective else "full hybrid, no selection"))

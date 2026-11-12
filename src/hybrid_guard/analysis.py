@@ -24,8 +24,8 @@ def condition_table(results: Mapping[str, CMATResult]) -> pd.DataFrame:
         s = r.settings
         support = r.changed_rows >= s["min_rows"]
         checks = {
-            "aggregate": (r.nrmse_upper < s["margin"], r.nrmse_upper, f"NRMSE change upper bound below {s['margin']}"),
-            "support": (support, float(r.changed_rows), f"at least {s['min_rows']} rows changed by more than {s['materiality']}"),
+            "aggregate": (r.nrmse_upper < s["margin"], r.nrmse_upper, f"{s.get('metric', 'NRMSE')} change upper bound below {s['margin']}"),
+            "support": (support, float(r.changed_rows), f"at least {s['min_rows']} rows changed" + (f" by more than {s['materiality']}" if not isinstance(s['materiality'], str) else " label")),
             "net_benefit": (r.net_benefit_lower > 0 if support else None, r.net_benefit_lower, "lower bound of benefit minus harm above 0"),
             "safety": (r.harm_upper <= s["harm_bound"] if support else None, r.harm_upper, f"harm upper bound at most {s['harm_bound']}"),
             "skill": ((r.skill_gap_lower > 0) if (support and r.selective) else None, r.skill_gap_lower,
