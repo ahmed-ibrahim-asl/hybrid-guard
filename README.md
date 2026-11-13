@@ -7,7 +7,7 @@
 
 **Good on average is not the same as safe.** Two checks for any model that combines a physics prior with machine learning, or that switches between models: before you train it, and before you trust it.
 
-Documentation and live charts: https://ahmed-ibrahim-asl.github.io/hybrid-guard/
+Documentation and live charts: https://eng-asl.com/hybrid-guard/ (mirror: https://ahmed-ibrahim-asl.github.io/hybrid-guard/)
 
 | When | Question | Tool |
 |---|---|---|
